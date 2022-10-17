@@ -7,6 +7,7 @@ import * as BallotJson from './assets/TokenizedBallot.json';
 require('dotenv').config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const TOKENIZED_BALLOT_CONTRACT_ADDRESS =
   process.env.TOKENIZED_BALLOT_CONTRACT_ADDRESS;
@@ -58,7 +59,7 @@ export class AppService {
     // this.provider = ethers.getDefaultProvider('goerli');
     this.provider = new ethers.providers.AlchemyProvider(
       'goerli',
-      'i2mfM1wXR78HZzwffO9ub-BtHdPFYAy2',
+      ALCHEMY_API_KEY,
     );
     this.erc20contract = new ethers.Contract(
       CONTRACT_ADDRESS,
