@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   AppService,
+  CastVote,
   ClaimPaymentDTO,
   Mint,
   PaymentOrder,
@@ -62,8 +63,23 @@ export class AppController {
     return this.appService.getVote(body);
   }
 
+  @Get('vote-spent')
+  votePowerSpent(@Body() body: VotePower) {
+    return this.appService.votePowerSpent(body);
+  }
+
+  @Get('proposal')
+  getProposal() {
+    return this.appService.getProposal();
+  }
+
   @Post('delegate')
   delegate(@Body() body: VotePower) {
     return this.appService.delegate(body);
+  }
+
+  @Post('vote')
+  postVote(@Body() body: CastVote) {
+    return this.appService.postVote(body);
   }
 }

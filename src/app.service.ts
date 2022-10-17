@@ -3,16 +3,22 @@ import { createSecretKey } from 'crypto';
 import { ethers, Signer } from 'ethers';
 import * as TokenJson from './assets/MyTokenVotes.json';
 import * as BallotJson from './assets/TokenizedBallot.json';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+require('dotenv').config();
 
-const PRIVATE_KEY = '';
-const CONTRACT_ADDRESS = '0xDA08a51b8186eD0BF4e048355B8287f382E07828';
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const TOKENIZED_BALLOT_CONTRACT_ADDRESS =
-  '0xb56449b4C646099035D4eB8B0bA821d36D8007D2';
+  process.env.TOKENIZED_BALLOT_CONTRACT_ADDRESS;
 
 export class PaymentOrder {
   id: string;
   secret: string;
   amount: number;
+}
+export class Proposal {
+  name: string;
+  voteCount: string;
 }
 
 export class ClaimPaymentDTO {
@@ -28,6 +34,10 @@ export class Mint {
 export class VotePower {
   address: string;
 }
+export class CastVote {
+  proposalIndex: number;
+  amount: string;
+}
 
 export class ReferenceBlock {
   block: bigint;
@@ -42,9 +52,14 @@ export class AppService {
   signer: ethers.Signer;
 
   database: PaymentOrder[];
+  proposal: Proposal[];
 
   constructor() {
-    this.provider = ethers.getDefaultProvider('goerli');
+    // this.provider = ethers.getDefaultProvider('goerli');
+    this.provider = new ethers.providers.AlchemyProvider(
+      'goerli',
+      'i2mfM1wXR78HZzwffO9ub-BtHdPFYAy2',
+    );
     this.erc20contract = new ethers.Contract(
       CONTRACT_ADDRESS,
       TokenJson.abi,
@@ -59,6 +74,7 @@ export class AppService {
     this.wallet = new ethers.Wallet(PRIVATE_KEY, this.provider);
     this.signer = this.wallet.connect(this.provider);
     this.database = [];
+    this.proposal = [];
   }
 
   async mint(body: Mint): Promise<string> {
@@ -67,29 +83,61 @@ export class AppService {
       body.address,
       ethers.utils.parseEther(body.amount),
     );
-    return mint;
+    const tx = await mint.wait(1);
+    return tx;
   }
 
   async delegate(body: VotePower): Promise<string> {
     const signedContract = this.erc20contract.connect(this.signer);
-    const delegate = await signedContract.delegates(body.address);
-    return delegate;
+    const delegate = await signedContract.delegate(body.address);
+    const tx = await delegate.wait(1);
+    return tx;
   }
 
   async getVote(body: VotePower): Promise<string> {
     const signedContract = this.erc20contract.connect(this.signer);
     const voteNumber = await signedContract.getVotes(body.address);
-    return voteNumber;
+    return voteNumber.toString();
+  }
+
+  async votePowerSpent(body: VotePower): Promise<string> {
+    const signedContract = this.tokenizedBallotContract.connect(this.signer);
+    const votePowerSpent = await signedContract.votePowerSpent(body.address);
+    return votePowerSpent.toString();
   }
 
   async getVotePower(body: VotePower): Promise<string> {
     const signedContract = this.tokenizedBallotContract.connect(this.signer);
     const votePower = await signedContract.votePower(body.address);
-    return votePower.toString();
+    return votePower;
+  }
+
+  async postVote(body: CastVote): Promise<string> {
+    const signedContract = this.tokenizedBallotContract.connect(this.signer);
+    const voting = await signedContract.vote(
+      body.proposalIndex,
+      ethers.utils.parseEther(body.amount),
+    );
+    const tx = await voting.wait(1);
+    return tx;
+  }
+
+  async getProposal(): Promise<any> {
+    const signedContract = this.tokenizedBallotContract.connect(this.signer);
+    for (let index = 0; index < 3; index++) {
+      const proposal = await signedContract.proposals(index);
+      const proposalObj: Proposal = {
+        name: ethers.utils.parseBytes32String(proposal.name),
+        voteCount: ethers.utils.formatEther(proposal.voteCount),
+      };
+      this.proposal.push(proposalObj);
+    }
+    return this.proposal;
   }
 
   async referenceBlock(body: ReferenceBlock): Promise<string> {
     const signedContract = this.tokenizedBallotContract.connect(this.signer);
+    const lastBlock = await this.provider.getBlock('latest');
     const votePower = await signedContract.setReferenceBlock(body.block);
     return votePower;
   }
