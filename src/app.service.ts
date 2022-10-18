@@ -131,14 +131,13 @@ export class AppService {
         name: ethers.utils.parseBytes32String(proposal.name),
         voteCount: ethers.utils.formatEther(proposal.voteCount),
       };
-      this.proposal.push(proposalObj);
+      this.proposal[index] = proposalObj;
     }
     return this.proposal;
   }
 
   async referenceBlock(body: ReferenceBlock): Promise<string> {
     const signedContract = this.tokenizedBallotContract.connect(this.signer);
-    const lastBlock = await this.provider.getBlock('latest');
     const votePower = await signedContract.setReferenceBlock(body.block);
     return votePower;
   }
